@@ -23,12 +23,18 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
     const [extractedDate, setExtractedDate] = useState<string | null>(null);
 
     const variations = project.variations || [];
-    const quotePdf = project.quotePdf || "devis_demo.pdf";
+    const quotePdf = project.quotePdf;
+    const isAbsoluteQuote = quotePdf?.startsWith("http");
+    const pdfUrl = isAbsoluteQuote ? quotePdf : `/${quotePdf || "devis_demo.pdf"}`;
+
+    const originalImage = project.originalImage;
+    const isAbsoluteImage = originalImage?.startsWith("http");
+    const imageUrl = isAbsoluteImage ? originalImage : (originalImage ? (originalImage.startsWith('/') ? originalImage : `/${originalImage}`) : "/facade_chalet.png");
 
     // Use extracted data if available, otherwise fall back to project data
     const displayDetails = extractedDetails || project.quoteDetails || [];
     const displayClient = extractedClient || project.client;
-    const displayDate = extractedDate || (project.date ? project.date.toLocaleDateString('fr-FR') : "Date inconnue");
+    const displayDate = extractedDate || (project.date ? (project.date instanceof Date ? project.date.toLocaleDateString('fr-FR') : new Date(project.date).toLocaleDateString('fr-FR')) : "Date inconnue");
 
     const handleGenerate = (variationId: string) => {
         if (selectedVariation === variationId) return;
@@ -44,17 +50,33 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
     };
 
     const handleAnalyzePdf = async () => {
+        if (!quotePdf) {
+            alert("Aucun fichier PDF à analyser.");
+            return;
+        }
         setIsAnalyzing(true);
         try {
-            const response = await fetch(`/${quotePdf}`);
-            const blob = await response.blob();
-            const formData = new FormData();
-            formData.append("file", blob, "devis.pdf");
+            let apiRes;
 
-            const apiRes = await fetch("/api/parse-pdf", {
-                method: "POST",
-                body: formData,
-            });
+            if (isAbsoluteQuote) {
+                // If it's a Supabase URL, let the server fetch it (no CORS issues)
+                apiRes = await fetch("/api/parse-pdf", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url: pdfUrl }),
+                });
+            } else {
+                // Legacy: Fetch locally then send as blob
+                const response = await fetch(pdfUrl);
+                const blob = await response.blob();
+                const formData = new FormData();
+                formData.append("file", blob, "devis.pdf");
+
+                apiRes = await fetch("/api/parse-pdf", {
+                    method: "POST",
+                    body: formData,
+                });
+            }
 
             const data = await apiRes.json();
             if (data.success && data.data) {
@@ -132,14 +154,20 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
                             )}
                         </div>
                         <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
-                            <a
-                                href={`/${quotePdf}`}
-                                target="_blank"
-                                className="block w-full text-center py-2 px-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                                rel="noreferrer"
-                            >
-                                Voir le PDF
-                            </a>
+                            {quotePdf ? (
+                                <a
+                                    href={pdfUrl}
+                                    target="_blank"
+                                    className="block w-full text-center py-2 px-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                    rel="noreferrer"
+                                >
+                                    Voir le PDF
+                                </a>
+                            ) : (
+                                <div className="text-center py-2 px-4 bg-slate-50 dark:bg-slate-900/50 text-slate-400 rounded-lg text-sm italic">
+                                    Pas de PDF
+                                </div>
+                            )}
                             <button
                                 onClick={handleAnalyzePdf}
                                 disabled={isAnalyzing}
@@ -182,7 +210,7 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
                 <div className="lg:col-span-9">
                     <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg group">
                         <img
-                            src={project.originalImage || "/facade_chalet.png"}
+                            src={imageUrl}
                             alt="Original"
                             className="absolute inset-0 w-full h-full object-contain transition-opacity duration-500"
                         />

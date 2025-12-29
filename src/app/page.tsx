@@ -13,19 +13,29 @@ export default function Home() {
 
   const [uploading, setUploading] = useState(false);
 
-  const handleFilesSelected = async (selectedFiles: File[]) => {
-    if (selectedFiles.length === 0) return;
+  const handleFilesAdded = (newFiles: File[]) => {
+    setFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const handleFileRemoved = (indexInList: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== indexInList));
+  };
+
+  const handleCreateProject = async () => {
+    if (files.length === 0) {
+      alert("Veuillez sélectionner au moins un fichier.");
+      return;
+    }
 
     setUploading(true);
-    setFiles(selectedFiles);
 
     try {
-      const uploadedUrls: string[] = [];
       let pdfUrl = "";
       let imageUrl = "";
 
       // 1. Upload files
-      for (const file of selectedFiles) {
+      for (const file of files) {
+        console.log("Uploading file:", file.name, "type:", file.type);
         const formData = new FormData();
         formData.append("file", file);
 
@@ -36,18 +46,28 @@ export default function Home() {
         const data = await res.json();
 
         if (data.success) {
-          if (file.type === "application/pdf") pdfUrl = data.url;
-          else imageUrl = data.url;
+          console.log("Upload success for", file.name, "URL:", data.url);
+          const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+          const isImage = file.type.startsWith("image/") || /\.(jpg|jpeg|png|webp|avif)$/i.test(file.name);
+
+          if (isPdf) {
+            pdfUrl = data.url;
+          } else if (isImage) {
+            imageUrl = data.url;
+          }
+        } else {
+          console.error("Upload failed for", file.name, data.error);
+          throw new Error(`Échec de l'envoi pour ${file.name}: ${data.details || data.error}`);
         }
       }
 
       // 2. Create Project in DB
       const projectData = {
-        title: "Nouveau Projet - " + new Date().toLocaleDateString(),
+        title: "Nouveau Projet - " + new Date().toLocaleDateString('fr-FR'),
         client: "Client Potentiel",
         status: "DRAFT",
-        originalImage: imageUrl || "/facade_chalet.png",
-        quotePdf: pdfUrl || "devis_demo.pdf",
+        originalImage: imageUrl || null,
+        quotePdf: pdfUrl || null,
         budget: "À définir"
       };
 
@@ -121,11 +141,34 @@ export default function Home() {
         >
           <div className="p-6">
             <UploadZone
-              onFilesSelected={handleFilesSelected}
-              label={uploading ? "Envoi en cours..." : "Démarrez un nouveau projet"}
-              subLabel={uploading ? "Veuillez patienter" : "Glissez vos photos et votre devis (PDF, JPG, PNG)"}
+              onFilesAdded={handleFilesAdded}
+              onFileRemoved={handleFileRemoved}
+              files={files}
+              label={uploading ? "Envoi en cours..." : "Ajoutez vos documents"}
+              subLabel={uploading ? "Veuillez patienter" : "Photos et devis (PDF, JPG, PNG)"}
               className="h-64"
             />
+
+            {files.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-center"
+              >
+                <button
+                  onClick={handleCreateProject}
+                  disabled={uploading}
+                  className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
+                >
+                  {uploading ? "Chargement..." : (
+                    <>
+                      Lancer le Projet
+                      <ArrowRight className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+              </motion.div>
+            )}
           </div>
         </motion.div>
 

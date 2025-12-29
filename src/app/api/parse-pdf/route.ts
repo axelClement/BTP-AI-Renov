@@ -4,14 +4,29 @@ const pdf = require("pdf-parse");
 
 export async function POST(req: NextRequest) {
     try {
-        const formData = await req.formData();
-        const file = formData.get("file") as File;
+        let buffer: Buffer;
 
-        if (!file) {
-            return NextResponse.json({ error: "No file provided" }, { status: 400 });
+        const contentType = req.headers.get("content-type") || "";
+
+        if (contentType.includes("application/json")) {
+            const body = await req.json();
+            if (body.url) {
+                console.log("API: Fetching PDF from URL:", body.url);
+                const response = await fetch(body.url);
+                if (!response.ok) throw new Error(`Échec du téléchargement du PDF (${response.status})`);
+                buffer = Buffer.from(await response.arrayBuffer());
+            } else {
+                return NextResponse.json({ error: "Missing URL in JSON body" }, { status: 400 });
+            }
+        } else {
+            const formData = await req.formData();
+            const file = formData.get("file") as File;
+            if (!file) {
+                return NextResponse.json({ error: "No file provided" }, { status: 400 });
+            }
+            buffer = Buffer.from(await file.arrayBuffer());
         }
 
-        const buffer = Buffer.from(await file.arrayBuffer());
         const data = await pdf(buffer);
         const text = data.text;
 

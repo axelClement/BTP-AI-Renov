@@ -6,7 +6,9 @@ import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 interface UploadZoneProps {
-    onFilesSelected: (files: File[]) => void;
+    onFilesAdded: (files: File[]) => void;
+    onFileRemoved: (index: number) => void;
+    files: File[];
     className?: string;
     accept?: string;
     label?: string;
@@ -14,14 +16,15 @@ interface UploadZoneProps {
 }
 
 export function UploadZone({
-    onFilesSelected,
+    onFilesAdded,
+    onFileRemoved,
+    files,
     className,
     accept = "image/*,application/pdf",
     label = "Glissez-déposez vos fichiers ici",
     subLabel = "ou cliquez pour sélectionner",
 }: UploadZoneProps) {
     const [isDragging, setIsDragging] = useState(false);
-    const [previewFiles, setPreviewFiles] = useState<File[]>([]);
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -37,28 +40,26 @@ export function UploadZone({
         (e: React.DragEvent) => {
             e.preventDefault();
             setIsDragging(false);
-            const files = Array.from(e.dataTransfer.files);
-            if (files.length > 0) {
-                setPreviewFiles((prev) => [...prev, ...files]);
-                onFilesSelected(files);
+            const newFiles = Array.from(e.dataTransfer.files);
+            if (newFiles.length > 0) {
+                onFilesAdded(newFiles);
             }
         },
-        [onFilesSelected]
+        [onFilesAdded]
     );
 
     const handleFileInput = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
-            const files = e.target.files ? Array.from(e.target.files) : [];
-            if (files.length > 0) {
-                setPreviewFiles((prev) => [...prev, ...files]);
-                onFilesSelected(files);
+            const newFiles = e.target.files ? Array.from(e.target.files) : [];
+            if (newFiles.length > 0) {
+                onFilesAdded(newFiles);
             }
         },
-        [onFilesSelected]
+        [onFilesAdded]
     );
 
     const removeFile = (index: number) => {
-        setPreviewFiles((prev) => prev.filter((_, i) => i !== index));
+        onFileRemoved(index);
     };
 
     return (
@@ -92,13 +93,13 @@ export function UploadZone({
                 </p>
             </div>
 
-            {previewFiles.length > 0 && (
+            {files.length > 0 && (
                 <div className="mt-6 space-y-3">
                     <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">
                         Fichiers sélectionnés
                     </h4>
                     <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-                        {previewFiles.map((file, idx) => (
+                        {files.map((file, idx) => (
                             <div
                                 key={idx}
                                 className="flex items-center p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm"
