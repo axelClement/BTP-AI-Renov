@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         // 1. Client (Look for "Client :" label)
         const clientMatch = text.match(/Client\s*[:\-\.]\s*([A-Za-zÀ-ÿ\s]+?)(?:\n|$)/i) ||
             text.match(/(?:Mr|M\.|Mme|Famille|SCI)\s+([A-Za-zÀ-ÿ\s]+)/);
-        if (clientMatch) client = clientMatch[0].trim();
+        if (clientMatch) client = (clientMatch[1] || clientMatch[0]).trim();
 
         // 2. Surface (Look for number followed by m² or m2)
         const surfaceMatch = text.match(/(\d+(?:[.,]\d+)?)\s*(?:m²|m2)/i);

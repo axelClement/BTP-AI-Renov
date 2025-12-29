@@ -34,6 +34,7 @@ export default function Home() {
       let imageUrl = "";
 
       // 1. Upload files
+      let extractedData = null;
       for (const file of files) {
         console.log("Uploading file:", file.name, "type:", file.type);
         const formData = new FormData();
@@ -52,6 +53,22 @@ export default function Home() {
 
           if (isPdf) {
             pdfUrl = data.url;
+            // Automatically analyze the PDF
+            try {
+              console.log("Automatically analyzing PDF...");
+              const parseRes = await fetch("/api/parse-pdf", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: data.url }),
+              });
+              const parseResult = await parseRes.json();
+              if (parseResult.success) {
+                extractedData = parseResult.data;
+                console.log("PDF analysis results:", extractedData);
+              }
+            } catch (e) {
+              console.warn("Automatic PDF analysis failed:", e);
+            }
           } else if (isImage) {
             imageUrl = data.url;
           }
@@ -62,13 +79,34 @@ export default function Home() {
       }
 
       // 2. Create Project in DB
+      let validDate = null;
+      if (extractedData?.date && extractedData.date !== "Non trouvé") {
+        const d = new Date(extractedData.date);
+        if (!isNaN(d.getTime())) {
+          validDate = d.toISOString();
+        }
+      }
+
       const projectData = {
-        title: "Nouveau Projet - " + new Date().toLocaleDateString('fr-FR'),
-        client: "Client Potentiel",
+        title: extractedData?.client && extractedData.client !== "Non trouvé"
+          ? `Projet ${extractedData.client}`
+          : "Nouveau Projet - " + new Date().toLocaleDateString('fr-FR'),
+        client: (extractedData?.client && extractedData.client !== "Non trouvé")
+          ? extractedData.client
+          : "Client Potentiel",
+        date: validDate || new Date().toISOString(),
         status: "DRAFT",
         originalImage: imageUrl || null,
         quotePdf: pdfUrl || null,
-        budget: "À définir"
+        budget: (extractedData?.budget && extractedData.budget !== "Non trouvé")
+          ? extractedData.budget
+          : "À définir",
+        quoteDetails: extractedData ? [
+          { label: "Client", value: extractedData.client },
+          { label: "Date", value: extractedData.date },
+          { label: "Surface", value: extractedData.surface },
+          { label: "Total TTC", value: extractedData.budget },
+        ] : undefined
       };
 
       const createRes = await fetch("/api/projects", {
@@ -82,7 +120,8 @@ export default function Home() {
       if (projectResult.success) {
         router.push(`/project/${projectResult.data.id}`);
       } else {
-        alert("Erreur lors de la création du projet.");
+        console.error("Project creation details:", projectResult);
+        alert(`Erreur lors de la création du projet: ${projectResult.details || projectResult.error}`);
       }
     } catch (error) {
       console.error("Upload error:", error);

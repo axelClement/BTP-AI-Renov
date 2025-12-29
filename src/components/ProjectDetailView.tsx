@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Wand2, Download, Share2, Layers, FileText } from "lucide-react";
+import { ArrowLeft, Wand2, Download, Share2, Layers, FileText, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 
@@ -11,16 +12,12 @@ interface ProjectDetailViewProps {
 }
 
 export function ProjectDetailView({ project }: ProjectDetailViewProps) {
+    const router = useRouter();
     const [isGenerating, setIsGenerating] = useState(false);
     const [selectedVariation, setSelectedVariation] = useState<string | null>(null);
     const [showComparison, setShowComparison] = useState(false);
     const [sliderPosition, setSliderPosition] = useState(50);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-    // State for extracted quote details (updated when PDF is analyzed)
-    const [extractedDetails, setExtractedDetails] = useState<{ label: string; value: string }[] | null>(null);
-    const [extractedClient, setExtractedClient] = useState<string | null>(null);
-    const [extractedDate, setExtractedDate] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const variations = project.variations || [];
     const quotePdf = project.quotePdf;
@@ -31,10 +28,10 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
     const isAbsoluteImage = originalImage?.startsWith("http");
     const imageUrl = isAbsoluteImage ? originalImage : (originalImage ? (originalImage.startsWith('/') ? originalImage : `/${originalImage}`) : "/facade_chalet.png");
 
-    // Use extracted data if available, otherwise fall back to project data
-    const displayDetails = extractedDetails || project.quoteDetails || [];
-    const displayClient = extractedClient || project.client;
-    const displayDate = extractedDate || (project.date ? (project.date instanceof Date ? project.date.toLocaleDateString('fr-FR') : new Date(project.date).toLocaleDateString('fr-FR')) : "Date inconnue");
+    // Use project data directly
+    const displayDetails = project.quoteDetails || [];
+    const displayClient = project.client;
+    const displayDate = project.date ? (project.date instanceof Date ? project.date.toLocaleDateString('fr-FR') : new Date(project.date).toLocaleDateString('fr-FR')) : "Date inconnue";
 
     const handleGenerate = (variationId: string) => {
         if (selectedVariation === variationId) return;
@@ -49,54 +46,25 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
         }, 2000);
     };
 
-    const handleAnalyzePdf = async () => {
-        if (!quotePdf) {
-            alert("Aucun fichier PDF à analyser.");
-            return;
-        }
-        setIsAnalyzing(true);
+    const handleDelete = async () => {
+        if (!confirm("Êtes-vous sûr de vouloir supprimer ce projet et tous ses fichiers ?")) return;
+
+        setIsDeleting(true);
         try {
-            let apiRes;
-
-            if (isAbsoluteQuote) {
-                // If it's a Supabase URL, let the server fetch it (no CORS issues)
-                apiRes = await fetch("/api/parse-pdf", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ url: pdfUrl }),
-                });
+            const res = await fetch(`/api/projects/${project.id}`, {
+                method: "DELETE",
+            });
+            const data = await res.json();
+            if (data.success) {
+                router.push("/dashboard");
             } else {
-                // Legacy: Fetch locally then send as blob
-                const response = await fetch(pdfUrl);
-                const blob = await response.blob();
-                const formData = new FormData();
-                formData.append("file", blob, "devis.pdf");
-
-                apiRes = await fetch("/api/parse-pdf", {
-                    method: "POST",
-                    body: formData,
-                });
-            }
-
-            const data = await apiRes.json();
-            if (data.success && data.data) {
-                setExtractedClient(data.data.client);
-                setExtractedDate(data.data.date);
-                setExtractedDetails([
-                    { label: "Client", value: data.data.client },
-                    { label: "Date", value: data.data.date },
-                    { label: "Surface", value: data.data.surface },
-                    { label: "Total TTC", value: data.data.budget },
-                ]);
-                alert(`Devis analysé avec succès !`);
-            } else {
-                alert(`Erreur lors de l'analyse du devis: ${data.details || data.error}`);
+                alert("Erreur lors de la suppression: " + data.details);
             }
         } catch (error) {
-            console.error(error);
-            alert("Erreur technique lors de l'analyse.");
+            console.error("Delete error:", error);
+            alert("Erreur technique lors de la suppression.");
         } finally {
-            setIsAnalyzing(false);
+            setIsDeleting(false);
         }
     };
 
@@ -124,6 +92,14 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="p-2 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                            title="Supprimer le projet"
+                        >
+                            {isDeleting ? <span className="animate-spin text-xs">⟳</span> : <Trash2 className="w-5 h-5" />}
+                        </button>
                         <button className="p-2 text-slate-500 hover:text-blue-600 transition-colors">
                             <Share2 className="w-5 h-5" />
                         </button>
@@ -168,14 +144,6 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
                                     Pas de PDF
                                 </div>
                             )}
-                            <button
-                                onClick={handleAnalyzePdf}
-                                disabled={isAnalyzing}
-                                className="mt-3 w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                            >
-                                {isAnalyzing ? <span className="animate-spin">⟳</span> : <FileText className="w-4 h-4" />}
-                                {isAnalyzing ? "Analyse..." : "Analyser"}
-                            </button>
                         </div>
                     </div>
 
