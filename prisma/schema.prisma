@@ -1,0 +1,52 @@
+// Prisma schema for BTP Renovation Visualizer
+// Database: Supabase PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Project {
+  id            String        @id @default(uuid())
+  title         String
+  client        String?
+  date          DateTime?
+  status        ProjectStatus @default(DRAFT)
+  budget        String?
+  originalImage String?
+  quotePdf      String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  quoteDetails QuoteDetail[]
+  variations   Variation[]
+}
+
+model QuoteDetail {
+  id        String  @id @default(uuid())
+  label     String
+  value     String
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Variation {
+  id        String  @id @default(uuid())
+  name      String
+  color     String
+  image     String?
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+enum ProjectStatus {
+  DRAFT
+  IN_PROGRESS
+  REVIEW
+  COMPLETED
+}
