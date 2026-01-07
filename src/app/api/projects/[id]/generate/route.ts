@@ -14,7 +14,7 @@ const MATERIAL_PROMPTS: Record<string, string> = {
     "Lasure Chêne Foncé": BASE_PROMPT("applying a dark oak stain")
 };
 
-export const maxDuration = 60; // Max execution time for Vercel Hobby
+export const maxDuration = 300; // Max execution time for Vercel Hobby (5 minutes)
 
 export async function POST(
     req: NextRequest,
