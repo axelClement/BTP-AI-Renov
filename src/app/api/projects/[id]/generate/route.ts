@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/prisma";
 import { supabaseAdmin } from "../../../../../lib/supabase";
-import fal from "@fal-ai/client";
+import { fal } from "@fal-ai/client";
 
 // PROMPT TEMPLATE
 const BASE_PROMPT = (action: string) =>
