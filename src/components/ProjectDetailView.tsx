@@ -33,17 +33,47 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
     const displayClient = project.client;
     const displayDate = project.date ? (project.date instanceof Date ? project.date.toLocaleDateString('fr-FR') : new Date(project.date).toLocaleDateString('fr-FR')) : "Date inconnue";
 
-    const handleGenerate = (variationId: string) => {
+    const handleGenerate = async (variationId: string) => {
+        const variation = variations.find((v: any) => v.id === variationId);
+
+        // If image already exists, just show it and don't call AI
+        if (variation?.image) {
+            setSelectedVariation(variationId);
+            setShowComparison(true);
+            return;
+        }
+
         if (selectedVariation === variationId) return;
+
         setIsGenerating(true);
         setSelectedVariation(null);
 
-        // Simulate AI generation
-        setTimeout(() => {
-            setSelectedVariation(variationId);
+        try {
+            const res = await fetch(`/api/projects/${project.id}/generate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ variationId })
+            });
+
+            const result = await res.json();
+
+            if (result.success) {
+                // Update the variation image in the local project object
+                if (variation) {
+                    variation.image = result.data.image;
+                }
+
+                setSelectedVariation(variationId);
+                setShowComparison(true);
+            } else {
+                alert("Erreur lors de la génération IA: " + (result.details || result.error));
+            }
+        } catch (error) {
+            console.error("AI Generation UI Error:", error);
+            alert("Une erreur technique est survenue lors de la génération.");
+        } finally {
             setIsGenerating(false);
-            setShowComparison(true);
-        }, 2000);
+        }
     };
 
     const handleDelete = async () => {

@@ -106,7 +106,12 @@ export default function Home() {
           { label: "Date", value: extractedData.date },
           { label: "Surface", value: extractedData.surface },
           { label: "Total TTC", value: extractedData.budget },
-        ] : undefined
+        ] : undefined,
+        variations: [
+          { name: "Sablage Naturel", color: "bg-orange-100", image: null },
+          { name: "Lasure Chêne Clair", color: "bg-orange-200", image: null },
+          { name: "Lasure Chêne Foncé", color: "bg-orange-900", image: null },
+        ]
       };
 
       const createRes = await fetch("/api/projects", {
