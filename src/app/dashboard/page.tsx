@@ -4,6 +4,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ProjectStatus } from "@prisma/client";
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
     // Fetch projects from database
     const projects = await prisma.project.findMany({
