@@ -10,13 +10,13 @@
 > The captures below illustrate the main interfaces of the application.
 
 ### Upload Menu
-![Upload PDF](docs/screenshots/upload.png)
+![Upload PDF](screenshots/upload.png)
 
 ### Project Dashboard
-![Dashboard](docs/screenshots/dashboard.png)
+![Dashboard](screenshots/dashboard.png)
 
 ### AI Visual Comparaison
-![AI Render](docs/screenshots/render.png)
+![AI Render](screenshots/render.png)
 
 
 ## 1. Project Overview

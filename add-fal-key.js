@@ -1,8 +1,17 @@
 const fs = require('fs');
 const path = require('path');
 
+// Usage: node add-fal-key.js <your-fal-key>
+// Never hardcode your API key here — pass it as a CLI argument instead.
+const falKey = process.argv[2];
+
+if (!falKey) {
+    console.error("Error: Please provide your FAL_KEY as an argument.");
+    console.error("Usage: node add-fal-key.js <your-fal-key>");
+    process.exit(1);
+}
+
 const envPath = path.join(__dirname, '.env');
-const falKey = "24eb7b35-b3ca-4071-a06c-0d382168d43d:f84adab7bad02d5687b0d4fb732c08f6";
 
 let content = '';
 if (fs.existsSync(envPath)) {
