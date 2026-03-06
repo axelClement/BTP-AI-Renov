@@ -1,8 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// Usage: node add-fal-key.js <your-fal-key>
-// Never hardcode your API key here — pass it as a CLI argument instead.
 const falKey = process.argv[2];
 
 if (!falKey) {
